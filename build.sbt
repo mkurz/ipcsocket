@@ -20,7 +20,8 @@ val nativeIncludes = settingKey[Seq[String]]("The native include paths")
 val buildDarwin = taskKey[Path]("Build fat binary for x86_64 and arm64 on mac os")
 val buildDarwinX86_64 = taskKey[Path]("Build mac native library for x86_64")
 val buildDarwinArm64 = taskKey[Path]("Build mac native library for arm64")
-val buildLinux = taskKey[Path]("Build linux native library")
+val buildLinuxX86_64 = taskKey[Path]("Build linux native library for x86_64")
+val buildLinuxAarch64 = taskKey[Path]("Build linux native library for aarch64")
 val buildWin32 = taskKey[Path]("Build windows native library")
 
 val isMac = scala.util.Properties.isMac
@@ -46,6 +47,8 @@ buildDarwin := {
 buildDarwin / skip := Option(System.getenv.get("CI")).fold(false)(_ => true)
 
 buildDarwinArm64 / nativeArch := "arm64"
+
+buildLinuxAarch64 / nativeArch := "aarch64"
 
 inThisBuild(
   List(
@@ -92,7 +95,8 @@ crossPaths := false
 autoScalaLibrary := false
 nativeLibrarySettings("darwinX86_64")
 nativeLibrarySettings("darwinArm64")
-nativeLibrarySettings("linux")
+nativeLibrarySettings("linuxX86_64")
+nativeLibrarySettings("linuxAarch64")
 nativeLibrarySettings("win32")
 if (!isWin) (buildWin32 / nativeCompiler := "x86_64-w64-mingw32-gcc") :: Nil else Nil
 buildWin32 / skip := {
@@ -100,7 +104,9 @@ buildWin32 / skip := {
 }
 Test / fork := true
 Test / fullClasspath :=
-  (Test / fullClasspath).dependsOn(buildDarwin, buildLinux, buildWin32).value
+  (Test / fullClasspath)
+    .dependsOn(buildDarwin, buildLinuxX86_64, buildLinuxAarch64, buildWin32)
+    .value
 clangfmt / fileInputs += baseDirectory.value.toGlob / "jni" / "*.c"
 
 Global / javaHome := {
@@ -113,7 +119,10 @@ Global / javaHome := {
 
 def nativeLibrarySettings(platform: String): Seq[Setting[_]] = {
   val key = TaskKey[Path](s"build${platform.head.toUpper}${platform.tail}")
-  val shortPlatform = if (platform.startsWith("darwin")) "darwin" else platform
+  val shortPlatform =
+    if (platform.startsWith("darwin")) "darwin"
+    else if (platform.startsWith("linux")) "linux"
+    else platform
   Def.settings(
     key / nativeCompileOptions ++= (shortPlatform match {
       case "win32" =>
@@ -126,7 +135,9 @@ def nativeLibrarySettings(platform: String): Seq[Setting[_]] = {
       val resourceDir = (Compile / resourceDirectory).value.toPath
       val targetDir = (Compile / target).value.toPath
       val arch = (key / nativeArch).value
-      (if (shortPlatform == "darwin") targetDir else resourceDir) / platform / arch / name
+      (if (shortPlatform == "darwin") targetDir else resourceDir) / (if (shortPlatform == "linux")
+                                                                       shortPlatform
+                                                                     else platform) / arch / name
     },
     key / fileInputs += {
       val glob = if (platform == "win32") "*Win*.{c,h}" else "*Unix*.{c,h}"

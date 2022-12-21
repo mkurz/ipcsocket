@@ -50,6 +50,7 @@ artifacts can be found be clicking on the "Image: Ubuntu" and "Image: macOS"
 links. On each PR page is a tab called "Artifacts". Click on that tab and there
 will be download links for the generated artifacts. The ubuntu image provides:
 * src/main/resources/linux/x86_64/libsbtipcsocket.so
+* src/main/resources/linux/aarch64/libsbtipcsocket.so
 * src/main/resources/win32/x86_64/sbtipcsocket.dll
 
 while the mac os image provides:

@@ -1,5 +1,6 @@
 package org.scalasbt.ipcsocket;
 
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -58,7 +59,11 @@ class NativeLoader {
         final String libName = (isWindows ? "" : "lib") + "sbtipcsocket" + extension;
         final String prefix = isMac ? "darwin" : isLinux ? "linux" : "win32";
 
-        final String resource = prefix + "/x86_64/" + libName;
+        final String arch =
+            isLinux && "aarch64".equals(System.getProperty("os.arch").toLowerCase(Locale.ROOT))
+                ? "aarch64"
+                : "x86_64";
+        final String resource = prefix + "/" + arch + "/" + libName;
         final URL url = NativeLoader.class.getClassLoader().getResource(resource);
         if (url == null) throw new UnsatisfiedLinkError(resource + " not found on classpath");
         try {

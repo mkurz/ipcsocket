@@ -117,6 +117,10 @@ Global / javaHome := {
   }
 }
 
+lazy val isLinuxAarch64Architecture: Boolean = sys.props
+  .getOrElse("os.arch", "")
+  .toLowerCase(java.util.Locale.ROOT) == "aarch64"
+
 def nativeLibrarySettings(platform: String): Seq[Setting[_]] = {
   val key = TaskKey[Path](s"build${platform.head.toUpper}${platform.tail}")
   val shortPlatform =
@@ -145,7 +149,14 @@ def nativeLibrarySettings(platform: String): Seq[Setting[_]] = {
     },
     key / skip := isWin || ((ThisBuild / nativePlatform).value match {
       case `platform` => false
-      case p          => p != "win32" && !platform.startsWith(p)
+      case p
+          if p == "linux" && shortPlatform == "linux" &&
+            (
+              ((key / nativeArch).value == "x86_64" && isLinuxAarch64Architecture) ||
+                ((key / nativeArch).value == "aarch64" && !isLinuxAarch64Architecture)
+            ) =>
+        true
+      case p => p != "win32" && !platform.startsWith(p)
     }),
     key / nativeBuild := {
       val artifact = (key / nativeArtifact).value
